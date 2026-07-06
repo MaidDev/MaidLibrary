@@ -37,6 +37,43 @@ local FB = Enum.Font.GothamBold
 local FM = Enum.Font.GothamMedium
 local FR = Enum.Font.Gotham
 
+local Themes = {
+    ["MaidDev Purple"] = {
+        Accent = Color3.fromHex("7C3AED"),
+        AccentB = Color3.fromHex("5B21B6"),
+        AccentGlow = Color3.fromHex("9D5CF6"),
+        BorderHov = Color3.fromHex("6D28D9")
+    },
+    ["Cyber Aqua"] = {
+        Accent = Color3.fromHex("06B6D4"),
+        AccentB = Color3.fromHex("0891B2"),
+        AccentGlow = Color3.fromHex("22D3EE"),
+        BorderHov = Color3.fromHex("06B6D4")
+    },
+    ["Crimson Red"] = {
+        Accent = Color3.fromHex("EF4444"),
+        AccentB = Color3.fromHex("B91C1C"),
+        AccentGlow = Color3.fromHex("F87171"),
+        BorderHov = Color3.fromHex("EF4444")
+    },
+    ["Gold Luxury"] = {
+        Accent = Color3.fromHex("F59E0B"),
+        AccentB = Color3.fromHex("B45309"),
+        AccentGlow = Color3.fromHex("FBBF24"),
+        BorderHov = Color3.fromHex("F59E0B")
+    },
+    ["Emerald Mint"] = {
+        Accent = Color3.fromHex("10B981"),
+        AccentB = Color3.fromHex("047857"),
+        AccentGlow = Color3.fromHex("34D399"),
+        BorderHov = Color3.fromHex("10B981")
+    }
+}
+
+local function registerAccent(lib, instance, prop, colorType)
+    table.insert(lib.accentObjects, {instance = instance, prop = prop, colorType = colorType})
+end
+
 -- ── Helpers ──────────────────────────────────────────────────
 local function tw(obj, props, t, style, dir)
     local info = TweenInfo.new(t or 0.18, style or Enum.EasingStyle.Quart, dir or Enum.EasingDirection.Out)
@@ -82,12 +119,29 @@ local function makeDraggable(handle, frame)
     end)
 end
 
+local function addSquishEffect(button)
+    local scale = button:FindFirstChildOfClass("UIScale")
+    if not scale then
+        scale = new("UIScale", {Scale = 1}, button)
+    end
+    button.MouseButton1Down:Connect(function()
+        tw(scale, {Scale = 0.95}, 0.05)
+    end)
+    button.MouseButton1Up:Connect(function()
+        tw(scale, {Scale = 1.0}, 0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    end)
+    button.MouseLeave:Connect(function()
+        tw(scale, {Scale = 1.0}, 0.15)
+    end)
+end
+
 -- ── Constructor ──────────────────────────────────────────────
 function MaidLib.new(title, subtitle)
     local self = setmetatable({}, MaidLib)
     self.tabs       = {}
     self.activetab  = nil
     self.visible    = true
+    self.accentObjects = {}
 
     -- Root GUI
     local sg = new("ScreenGui", {
@@ -162,6 +216,8 @@ function MaidLib.new(title, subtitle)
         BackgroundColor3=T.Accent, BorderSizePixel=0,
     }, logoFrame)
     corner(12, iconBox)
+    registerAccent(self, iconBox, "BackgroundColor3", "Accent")
+    
     gradient(ColorSequence.new({
         ColorSequenceKeypoint.new(0,T.AccentGlow),
         ColorSequenceKeypoint.new(1,T.AccentB),
@@ -198,9 +254,9 @@ function MaidLib.new(title, subtitle)
         BackgroundColor3=T.Border, BorderSizePixel=0,
     }, sidebar)
 
-    -- ── Tab buttons list ─────────────────────────────────────
+    -- ── Tab buttons list (height adjusted for the stats box) ──
     local tabScroll = new("ScrollingFrame",{
-        Size=UDim2.new(1,0,1,-85), Position=UDim2.new(0,0,0,80),
+        Size=UDim2.new(1,0,1,-195), Position=UDim2.new(0,0,0,80),
         BackgroundTransparency=1, BorderSizePixel=0,
         ScrollBarThickness=0,
         CanvasSize=UDim2.new(0,0,0,0),
@@ -208,6 +264,92 @@ function MaidLib.new(title, subtitle)
     }, sidebar)
     local tabLayout = listLayout(3, tabScroll)
     pad(6,8,8,8, tabScroll)
+
+    -- ── Session Stats Panel ──────────────────────────────────
+    local statsCard = new("Frame", {
+        Size = UDim2.new(1, -24, 0, 95),
+        Position = UDim2.new(0, 12, 1, -110),
+        BackgroundColor3 = T.Card,
+        BorderSizePixel = 0,
+    }, sidebar)
+    corner(10, statsCard)
+    stroke(T.Border, 1, statsCard)
+    
+    local statsTitle = new("TextLabel", {
+        Size = UDim2.new(1, -16, 0, 14),
+        Position = UDim2.new(0, 8, 0, 6),
+        BackgroundTransparency = 1,
+        Text = "SESSION STATS",
+        TextSize = 9, Font = FB,
+        TextColor3 = T.Accent,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, statsCard)
+    registerAccent(self, statsTitle, "TextColor3", "Accent")
+    
+    -- Status
+    new("TextLabel", {
+        Size = UDim2.new(0.4, 0, 0, 14), Position = UDim2.new(0, 8, 0, 24),
+        BackgroundTransparency = 1, Text = "Status:", TextSize = 11, Font = FM,
+        TextColor3 = T.TextSub, TextXAlignment = Enum.TextXAlignment.Left,
+    }, statsCard)
+    local statusLabel = new("TextLabel", {
+        Size = UDim2.new(0.6, -16, 0, 14), Position = UDim2.new(0.4, 8, 0, 24),
+        BackgroundTransparency = 1, Text = "Idle", TextSize = 11, Font = FB,
+        TextColor3 = T.TextSub, TextXAlignment = Enum.TextXAlignment.Right,
+    }, statsCard)
+    self.statusLabel = statusLabel
+    
+    -- Runtime
+    new("TextLabel", {
+        Size = UDim2.new(0.4, 0, 0, 14), Position = UDim2.new(0, 8, 0, 40),
+        BackgroundTransparency = 1, Text = "Runtime:", TextSize = 11, Font = FM,
+        TextColor3 = T.TextSub, TextXAlignment = Enum.TextXAlignment.Left,
+    }, statsCard)
+    local runtimeLabel = new("TextLabel", {
+        Size = UDim2.new(0.6, -16, 0, 14), Position = UDim2.new(0.4, 8, 0, 40),
+        BackgroundTransparency = 1, Text = "00:00:00", TextSize = 11, Font = FR,
+        TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Right,
+    }, statsCard)
+    self.runtimeLabel = runtimeLabel
+    
+    -- Crystals Mined
+    new("TextLabel", {
+        Size = UDim2.new(0.4, 0, 0, 14), Position = UDim2.new(0, 8, 0, 56),
+        BackgroundTransparency = 1, Text = "Mined:", TextSize = 11, Font = FM,
+        TextColor3 = T.TextSub, TextXAlignment = Enum.TextXAlignment.Left,
+    }, statsCard)
+    local minedLabel = new("TextLabel", {
+        Size = UDim2.new(0.6, -16, 0, 14), Position = UDim2.new(0.4, 8, 0, 56),
+        BackgroundTransparency = 1, Text = "0", TextSize = 11, Font = FB,
+        TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Right,
+    }, statsCard)
+    self.minedLabel = minedLabel
+    
+    -- Auto-Sells
+    new("TextLabel", {
+        Size = UDim2.new(0.4, 0, 0, 14), Position = UDim2.new(0, 8, 0, 72),
+        BackgroundTransparency = 1, Text = "Sold Times:", TextSize = 11, Font = FM,
+        TextColor3 = T.TextSub, TextXAlignment = Enum.TextXAlignment.Left,
+    }, statsCard)
+    local soldLabel = new("TextLabel", {
+        Size = UDim2.new(0.6, -16, 0, 14), Position = UDim2.new(0.4, 8, 0, 72),
+        BackgroundTransparency = 1, Text = "0", TextSize = 11, Font = FB,
+        TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Right,
+    }, statsCard)
+    self.soldLabel = soldLabel
+
+    -- Start runtime counter
+    local startTime = os.time()
+    task.spawn(function()
+        while sg.Parent do
+            task.wait(1)
+            local elapsed = os.time() - startTime
+            local h = math.floor(elapsed / 3600)
+            local m = math.floor((elapsed % 3600) / 60)
+            local s = elapsed % 60
+            pcall(function() runtimeLabel.Text = string.format("%02d:%02d:%02d", h, m, s) end)
+        end
+    end)
 
     -- ── Topbar ───────────────────────────────────────────────
     local topbar = new("Frame",{
@@ -220,11 +362,23 @@ function MaidLib.new(title, subtitle)
     local topAccent = new("Frame",{
         Size=UDim2.new(1,0,0,2), BackgroundColor3=T.Accent, BorderSizePixel=0,
     }, topbar)
-    gradient(ColorSequence.new({
+    registerAccent(self, topAccent, "BackgroundColor3", "Accent")
+    
+    local topAccentGrad = gradient(ColorSequence.new({
         ColorSequenceKeypoint.new(0,T.AccentGlow),
         ColorSequenceKeypoint.new(0.5,T.Accent),
         ColorSequenceKeypoint.new(1,Color3.fromHex("4338CA")),
     }), 0, topAccent)
+    
+    -- Animate top accent line (smooth rotation)
+    task.spawn(function()
+        local rot = 0
+        while sg.Parent do
+            RunService.Heartbeat:Wait()
+            rot = (rot + 1) % 360
+            pcall(function() topAccentGrad.Rotation = rot end)
+        end
+    end)
 
     -- Topbar path text
     new("TextLabel",{
@@ -244,6 +398,7 @@ function MaidLib.new(title, subtitle)
         TextColor3=T.TextSub, AutoButtonColor=false,
     }, topbar)
     corner(8, minBtn)
+    addSquishEffect(minBtn)
     minBtn.MouseEnter:Connect(function() tw(minBtn,{BackgroundColor3=T.Yellow,TextColor3=T.White}) end)
     minBtn.MouseLeave:Connect(function() tw(minBtn,{BackgroundColor3=T.Card,TextColor3=T.TextSub}) end)
 
@@ -274,6 +429,7 @@ function MaidLib.new(title, subtitle)
         TextColor3=T.TextSub, AutoButtonColor=false,
     }, topbar)
     corner(8, closeBtn)
+    addSquishEffect(closeBtn)
     closeBtn.MouseEnter:Connect(function() tw(closeBtn,{BackgroundColor3=T.Red,TextColor3=T.White}) end)
     closeBtn.MouseLeave:Connect(function() tw(closeBtn,{BackgroundColor3=T.Card,TextColor3=T.TextSub}) end)
     closeBtn.Activated:Connect(function()
@@ -344,6 +500,7 @@ function MaidLib:AddTab(name, icon)
         LayoutOrder=idx,
     }, self.tabScroll)
     corner(10, btn)
+    addSquishEffect(btn)
 
     -- Active indicator
     local bar = new("Frame",{
@@ -353,15 +510,35 @@ function MaidLib:AddTab(name, icon)
         BackgroundTransparency=1, BorderSizePixel=0,
     }, btn)
     corner(3,bar)
+    registerAccent(self, bar, "BackgroundColor3", "Accent")
 
-    -- Icon
-    local ico = new("TextLabel",{
-        Size=UDim2.new(0,26,1,0),
-        Position=UDim2.new(0,12,0,0),
-        BackgroundTransparency=1,
-        Text=icon or "◆", TextSize=15, Font=FB,
-        TextColor3=T.TextSub,
-    }, btn)
+    -- Icon (Lucide replacement)
+    local IconMap = {
+        ["⛏"] = "rbxassetid://10734951430",
+        ["💎"] = "rbxassetid://10734950309",
+        ["👁"] = "rbxassetid://10734950514",
+        ["🛡"] = "rbxassetid://10734950153",
+    }
+    local iconId = IconMap[icon]
+    
+    local ico
+    if iconId then
+        ico = new("ImageLabel", {
+            Size = UDim2.new(0, 18, 0, 18),
+            Position = UDim2.new(0, 14, 0.5, -9),
+            BackgroundTransparency = 1,
+            Image = iconId,
+            ImageColor3 = T.TextSub,
+        }, btn)
+    else
+        ico = new("TextLabel",{
+            Size=UDim2.new(0,26,1,0),
+            Position=UDim2.new(0,12,0,0),
+            BackgroundTransparency=1,
+            Text=icon or "◆", TextSize=15, Font=FB,
+            TextColor3=T.TextSub,
+        }, btn)
+    end
 
     -- Name
     local lbl = new("TextLabel",{
@@ -418,8 +595,14 @@ function MaidLib:SelectTab(idx)
         t.page.Visible = active
         tw(t.btn,  {BackgroundColor3 = active and Color3.fromHex("1C1C32") or T.Surface})
         tw(t.lbl,  {TextColor3 = active and T.Text or T.TextSub})
-        tw(t.ico,  {TextColor3 = active and T.Accent or T.TextSub})
         tw(t.bar,  {BackgroundTransparency = active and 0 or 1})
+        
+        -- Color state changes
+        if t.ico:IsA("ImageLabel") then
+            tw(t.ico, {ImageColor3 = active and T.Accent or T.TextSub})
+        else
+            tw(t.ico, {TextColor3 = active and T.Accent or T.TextSub})
+        end
     end
 end
 
@@ -459,6 +642,7 @@ function MaidLib:AddToggle(tab, opts)
     }, tab.page)
     corner(10, row)
     local st = stroke(T.Border, 1, row)
+    addSquishEffect(row)
 
     -- Hover
     local hoverBtn = new("TextButton",{
@@ -529,6 +713,12 @@ function MaidLib:AddToggle(tab, opts)
         if opts.callback then pcall(opts.callback, state) end
     end)
 
+    -- Store refresh routine for theme shifts
+    if not self.toggles then self.toggles = {} end
+    table.insert(self.toggles, function()
+        setVisual(state, false)
+    end)
+
     local obj = {}
     function obj:Set(v) state=v; setVisual(v,true) end
     function obj:Get() return state end
@@ -546,6 +736,7 @@ function MaidLib:AddButton(tab, opts)
     }, tab.page)
     corner(10, btn)
     local st = stroke(T.Border, 1, btn)
+    addSquishEffect(btn)
 
     new("TextLabel",{
         Size=UDim2.new(1,-48,1,0),
@@ -583,9 +774,6 @@ function MaidLib:AddButton(tab, opts)
         tw(st,    {Color=T.Border})
         tw(arrow, {BackgroundColor3=T.Surface})
         tw(arrow:FindFirstChildOfClass("TextLabel"), {TextColor3=T.TextSub})
-    end)
-    btn.MouseButton1Down:Connect(function()
-        tw(btn, {BackgroundColor3=Color3.fromHex("1A1A30")}, 0.05)
     end)
     btn.Activated:Connect(function()
         print("[MaidLib] Button clicked: " .. tostring(opts.text))
@@ -785,6 +973,44 @@ function MaidLib:AddSlider(tab, opts)
     function obj:Set(v) updateVal(v) end
     function obj:Get() return val end
     return obj
+end
+
+function MaidLib:SetTheme(themeName)
+    local theme = Themes[themeName]
+    if not theme then return end
+    
+    T.Accent = theme.Accent
+    T.AccentB = theme.AccentB
+    T.AccentGlow = theme.AccentGlow
+    T.BorderHov = theme.BorderHov
+    
+    for _, item in ipairs(self.accentObjects) do
+        if item.instance and item.instance.Parent then
+            local targetColor = theme[item.colorType] or T[item.colorType]
+            tw(item.instance, {[item.prop] = targetColor}, 0.3)
+        end
+    end
+    
+    for _, t in ipairs(self.tabs) do
+        if t.page then
+            t.page.ScrollBarImageColor3 = T.Accent
+        end
+    end
+end
+
+function MaidLib:SetStatus(statusText, color)
+    if self.statusLabel then
+        self.statusLabel.Text = statusText
+        if color then self.statusLabel.TextColor3 = color end
+    end
+end
+
+function MaidLib:UpdateStat(statName, value)
+    if statName == "Crystals" or statName == "Mined" then
+        if self.minedLabel then self.minedLabel.Text = tostring(value) end
+    elseif statName == "Sold" then
+        if self.soldLabel then self.soldLabel.Text = tostring(value) end
+    end
 end
 
 return MaidLib
