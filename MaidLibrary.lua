@@ -119,10 +119,11 @@ local function makeDraggable(handle, frame)
     end)
 end
 
-local function addSquishEffect(button)
-    local scale = button:FindFirstChildOfClass("UIScale")
+local function addSquishEffect(button, scaleTarget)
+    scaleTarget = scaleTarget or button
+    local scale = scaleTarget:FindFirstChildOfClass("UIScale")
     if not scale then
-        scale = new("UIScale", {Scale = 1}, button)
+        scale = new("UIScale", {Scale = 1}, scaleTarget)
     end
     button.MouseButton1Down:Connect(function()
         tw(scale, {Scale = 0.95}, 0.05)
@@ -642,12 +643,12 @@ function MaidLib:AddToggle(tab, opts)
     }, tab.page)
     corner(10, row)
     local st = stroke(T.Border, 1, row)
-    addSquishEffect(row)
 
     -- Hover
     local hoverBtn = new("TextButton",{
         Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, Text="",
     }, row)
+    addSquishEffect(hoverBtn, row)
 
     hoverBtn.MouseEnter:Connect(function()
         tw(row, {BackgroundColor3=T.SurfaceHov}); tw(st, {Color=T.BorderHov})
