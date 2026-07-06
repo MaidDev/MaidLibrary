@@ -244,21 +244,38 @@ function MaidLib.new(title, subtitle)
         ColorSequenceKeypoint.new(0,T.AccentGlow),
         ColorSequenceKeypoint.new(1,T.AccentB),
     }), 135, iconBox)
-    new("TextLabel",{
+    
+    -- Default Pickaxe Logo
+    local defaultLogo = new("TextLabel",{
         Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
         Text="⛏", TextSize=20, Font=FB,
         TextColor3=T.White,
+        ZIndex = 2,
     }, iconBox)
 
-    -- Title
-    new("TextLabel",{
+    -- Avatar Logo (Hidden initially)
+    local avatarLogo = new("ImageLabel", {
+        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
+        Image = "rbxthumb://type=AvatarHeadShot&id=" .. game:GetService("Players").LocalPlayer.UserId .. "&w=150&h=150",
+        ImageTransparency = 1,
+        ZIndex = 3,
+    }, iconBox)
+    corner(12, avatarLogo)
+
+    -- Title container with clipping
+    local titleClip = new("Frame", {
         Size=UDim2.new(1,-70,0,18), Position=UDim2.new(0,64,0,20),
+        BackgroundTransparency=1, ClipsDescendants=true,
+    }, logoFrame)
+
+    local titleLabel = new("TextLabel",{
+        Size=UDim2.new(1,0,1,0), Position=UDim2.new(0,0,0,0),
         BackgroundTransparency=1,
         Text=title or "MaidDev",
         TextSize=14, Font=FB,
         TextColor3=T.Text,
         TextXAlignment=Enum.TextXAlignment.Left,
-    }, logoFrame)
+    }, titleClip)
 
     -- Subtitle
     new("TextLabel",{
@@ -269,6 +286,54 @@ function MaidLib.new(title, subtitle)
         TextColor3=T.TextSub,
         TextXAlignment=Enum.TextXAlignment.Left,
     }, logoFrame)
+
+    -- Background Loop for Logo & Username Dynamic Carousel Roll
+    task.spawn(function()
+        local player = game:GetService("Players").LocalPlayer
+        local realName = player.DisplayName or player.Name
+        local isAvatarActive = false
+        local logoRotation = 0
+
+        task.wait(2.5) -- Wait for UI entry animations to settle
+
+        while true do
+            task.wait(4.5) -- Swap every 4.5 seconds
+            
+            isAvatarActive = not isAvatarActive
+            
+            -- 1. Logo Rotate & Swap
+            logoRotation = logoRotation + 180
+            tw(iconBox, {Rotation = logoRotation}, 0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+            
+            task.delay(0.2, function()
+                if isAvatarActive then
+                    tw(defaultLogo, {TextTransparency = 1}, 0.15)
+                    tw(avatarLogo, {ImageTransparency = 0}, 0.15)
+                else
+                    tw(defaultLogo, {TextTransparency = 0}, 0.15)
+                    tw(avatarLogo, {ImageTransparency = 1}, 0.15)
+                end
+            end)
+
+            -- 2. Text Slide Roll Animation
+            -- Slide Up & Fade Out
+            tw(titleLabel, {Position = UDim2.new(0, 0, -1, 0), TextTransparency = 1}, 0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+            task.wait(0.3)
+            
+            -- Update Text
+            if isAvatarActive then
+                titleLabel.Text = realName
+            else
+                titleLabel.Text = title or "MaidDev"
+            end
+            
+            -- Reset position below the view clipping area
+            titleLabel.Position = UDim2.new(0, 0, 1, 0)
+            
+            -- Slide Up into view & Fade In
+            tw(titleLabel, {Position = UDim2.new(0, 0, 0, 0), TextTransparency = 0}, 0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        end
+    end)
 
     -- Divider
     local logoDivider = new("Frame",{
@@ -540,9 +605,9 @@ function MaidLib:AddTab(name, icon)
 
     local IconMap = {
         ["⛏"] = "rbxthumb://type=Asset&id=10723345869&w=150&h=150",
-        ["💎"] = "rbxthumb://type=Asset&id=10747373180&w=150&h=150",
-        ["👁"] = "rbxthumb://type=Asset&id=10734950532&w=150&h=150",
-        ["🛡"] = "rbxthumb://type=Asset&id=10734950179&w=150&h=150",
+        ["💎"] = "rbxthumb://type=Asset&id=7733942651&w=150&h=150",
+        ["👁"] = "rbxthumb://type=Asset&id=7733774602&w=150&h=150",
+        ["🛡"] = "rbxthumb://type=Asset&id=7734056411&w=150&h=150",
     }
     local iconId = IconMap[icon]
     
