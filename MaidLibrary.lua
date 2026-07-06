@@ -301,9 +301,11 @@ function MaidLib.new(title, subtitle)
             
             isAvatarActive = not isAvatarActive
             
-            -- 1. Logo Rotate & Swap
+            -- 1. Logo Rotate & Swap (Gyroscope effect: parent spins, child counter-spins to stay upright!)
             logoRotation = logoRotation + 180
             tw(iconBox, {Rotation = logoRotation}, 0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+            tw(defaultLogo, {Rotation = -logoRotation}, 0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+            tw(avatarLogo, {Rotation = -logoRotation}, 0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
             
             task.delay(0.2, function()
                 if isAvatarActive then
@@ -604,7 +606,7 @@ function MaidLib:AddTab(name, icon)
     registerAccent(self, bar, "BackgroundColor3", "Accent")
 
     local IconMap = {
-        ["⛏"] = "rbxthumb://type=Asset&id=10723345869&w=150&h=150",
+        ["⛏"] = "rbxthumb://type=Asset&id=7733674079&w=150&h=150",
         ["💎"] = "rbxthumb://type=Asset&id=7733942651&w=150&h=150",
         ["👁"] = "rbxthumb://type=Asset&id=7733774602&w=150&h=150",
         ["🛡"] = "rbxthumb://type=Asset&id=7734056411&w=150&h=150",
