@@ -42,31 +42,51 @@ local Themes = {
         Accent = Color3.fromHex("7C3AED"),
         AccentB = Color3.fromHex("5B21B6"),
         AccentGlow = Color3.fromHex("9D5CF6"),
-        BorderHov = Color3.fromHex("6D28D9")
+        BorderHov = Color3.fromHex("6D28D9"),
+        Bg = Color3.fromHex("09090F"),
+        Surface = Color3.fromHex("11111A"),
+        Card = Color3.fromHex("141420"),
+        Border = Color3.fromHex("252535")
     },
     ["Cyber Aqua"] = {
         Accent = Color3.fromHex("06B6D4"),
         AccentB = Color3.fromHex("0891B2"),
         AccentGlow = Color3.fromHex("22D3EE"),
-        BorderHov = Color3.fromHex("06B6D4")
+        BorderHov = Color3.fromHex("06B6D4"),
+        Bg = Color3.fromHex("070E12"),
+        Surface = Color3.fromHex("0D171C"),
+        Card = Color3.fromHex("101E24"),
+        Border = Color3.fromHex("202F3A")
     },
     ["Crimson Red"] = {
         Accent = Color3.fromHex("EF4444"),
         AccentB = Color3.fromHex("B91C1C"),
         AccentGlow = Color3.fromHex("F87171"),
-        BorderHov = Color3.fromHex("EF4444")
+        BorderHov = Color3.fromHex("EF4444"),
+        Bg = Color3.fromHex("0F0909"),
+        Surface = Color3.fromHex("191010"),
+        Card = Color3.fromHex("221414"),
+        Border = Color3.fromHex("352020")
     },
     ["Gold Luxury"] = {
         Accent = Color3.fromHex("F59E0B"),
         AccentB = Color3.fromHex("B45309"),
         AccentGlow = Color3.fromHex("FBBF24"),
-        BorderHov = Color3.fromHex("F59E0B")
+        BorderHov = Color3.fromHex("F59E0B"),
+        Bg = Color3.fromHex("0F0C09"),
+        Surface = Color3.fromHex("181410"),
+        Card = Color3.fromHex("201B14"),
+        Border = Color3.fromHex("302920")
     },
     ["Emerald Mint"] = {
         Accent = Color3.fromHex("10B981"),
         AccentB = Color3.fromHex("047857"),
         AccentGlow = Color3.fromHex("34D399"),
-        BorderHov = Color3.fromHex("10B981")
+        BorderHov = Color3.fromHex("10B981"),
+        Bg = Color3.fromHex("090F0C"),
+        Surface = Color3.fromHex("101814"),
+        Card = Color3.fromHex("14201B"),
+        Border = Color3.fromHex("203029")
     }
 }
 
@@ -163,7 +183,9 @@ function MaidLib.new(title, subtitle)
         ClipsDescendants = true,
     }, sg)
     corner(16, main)
-    stroke(T.Border, 1, main)
+    registerAccent(self, main, "BackgroundColor3", "Bg")
+    local mainStroke = stroke(T.Border, 1, main)
+    registerAccent(self, mainStroke, "Color", "Border")
 
     -- Drop shadow (fake via ImageLabel)
     local shadow = new("ImageLabel", {
@@ -171,12 +193,13 @@ function MaidLib.new(title, subtitle)
         Position = UDim2.new(0,-30,0,-30),
         BackgroundTransparency = 1,
         Image = "rbxassetid://5554236805",
-        ImageColor3 = Color3.fromHex("7C3AED"),
+        ImageColor3 = T.Accent,
         ImageTransparency = 0.7,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = Rect.new(23,23,277,277),
         ZIndex = 0,
     }, main)
+    registerAccent(self, shadow, "ImageColor3", "Accent")
 
     -- Clip inner content
     local clip = new("Frame", {
@@ -193,17 +216,14 @@ function MaidLib.new(title, subtitle)
         BackgroundColor3 = T.Surface,
         BorderSizePixel = 0,
     }, clip)
-    -- Gradient bg
-    gradient(ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromHex("14142A")),
-        ColorSequenceKeypoint.new(1, T.Surface),
-    }), 160, sidebar)
+    registerAccent(self, sidebar, "BackgroundColor3", "Surface")
 
     -- Right border line
-    new("Frame", {
+    local sidebarBorder = new("Frame", {
         Size=UDim2.new(0,1,1,0), Position=UDim2.new(1,-1,0,0),
         BackgroundColor3=T.Border, BorderSizePixel=0,
     }, sidebar)
+    registerAccent(self, sidebarBorder, "BackgroundColor3", "Border")
 
     -- ── Logo area ────────────────────────────────────────────
     local logoFrame = new("Frame", {
@@ -250,10 +270,11 @@ function MaidLib.new(title, subtitle)
     }, logoFrame)
 
     -- Divider
-    new("Frame",{
+    local logoDivider = new("Frame",{
         Size=UDim2.new(1,-24,0,1), Position=UDim2.new(0,12,0,74),
         BackgroundColor3=T.Border, BorderSizePixel=0,
     }, sidebar)
+    registerAccent(self, logoDivider, "BackgroundColor3", "Border")
 
     -- ── Tab buttons list (height adjusted for the stats box) ──
     local tabScroll = new("ScrollingFrame",{
@@ -274,7 +295,9 @@ function MaidLib.new(title, subtitle)
         BorderSizePixel = 0,
     }, sidebar)
     corner(10, statsCard)
-    stroke(T.Border, 1, statsCard)
+    registerAccent(self, statsCard, "BackgroundColor3", "Card")
+    local statsStroke = stroke(T.Border, 1, statsCard)
+    registerAccent(self, statsStroke, "Color", "Border")
     
     local statsTitle = new("TextLabel", {
         Size = UDim2.new(1, -16, 0, 14),
@@ -358,6 +381,7 @@ function MaidLib.new(title, subtitle)
         Position=UDim2.new(0,210,0,0),
         BackgroundColor3=T.Bg, BorderSizePixel=0,
     }, clip)
+    registerAccent(self, topbar, "BackgroundColor3", "Bg")
 
     -- Accent line at very top
     local topAccent = new("Frame",{
@@ -513,12 +537,11 @@ function MaidLib:AddTab(name, icon)
     corner(3,bar)
     registerAccent(self, bar, "BackgroundColor3", "Accent")
 
-    -- Icon (Lucide replacement)
     local IconMap = {
-        ["⛏"] = "rbxassetid://10734951430",
-        ["💎"] = "rbxassetid://10734950309",
-        ["👁"] = "rbxassetid://10734950514",
-        ["🛡"] = "rbxassetid://10734950153",
+        ["⛏"] = "rbxassetid://10723345869",
+        ["💎"] = "rbxassetid://10747373180",
+        ["👁"] = "rbxassetid://10734950532",
+        ["🛡"] = "rbxassetid://10734950179",
     }
     local iconId = IconMap[icon]
     
@@ -642,18 +665,15 @@ function MaidLib:AddToggle(tab, opts)
         BackgroundColor3=T.Card, BorderSizePixel=0, LayoutOrder=tab.n,
     }, tab.page)
     corner(10, row)
+    registerAccent(self, row, "BackgroundColor3", "Card")
     local st = stroke(T.Border, 1, row)
+    registerAccent(self, st, "Color", "Border")
 
-    -- Hover
-    local hoverBtn = new("TextButton",{
-        Size=UDim2.new(1,0,1,0), BackgroundTransparency=1, Text="",
-    }, row)
-    addSquishEffect(hoverBtn, row)
-
-    hoverBtn.MouseEnter:Connect(function()
+    -- Hover highlights on the row body
+    row.MouseEnter:Connect(function()
         tw(row, {BackgroundColor3=T.SurfaceHov}); tw(st, {Color=T.BorderHov})
     end)
-    hoverBtn.MouseLeave:Connect(function()
+    row.MouseLeave:Connect(function()
         tw(row, {BackgroundColor3=T.Card});       tw(st, {Color=T.Border})
     end)
 
@@ -696,6 +716,14 @@ function MaidLib:AddToggle(tab, opts)
     }, track)
     corner(9, thumb)
 
+    -- Clickable toggle button covering only the track (padded for easy interaction)
+    local toggleBtn = new("TextButton",{
+        Size=UDim2.new(0,64,0,44),
+        Position=UDim2.new(1,-68,0.5,-22),
+        BackgroundTransparency=1, Text="",
+    }, row)
+    addSquishEffect(toggleBtn, track)
+
     local function setVisual(on, animate)
         local f = animate and tw or function(o,p) for k,v in pairs(p) do o[k]=v end end
         if on then
@@ -708,7 +736,7 @@ function MaidLib:AddToggle(tab, opts)
     end
     setVisual(state, false)
 
-    hoverBtn.Activated:Connect(function()
+    toggleBtn.Activated:Connect(function()
         state = not state
         setVisual(state, true)
         if opts.callback then pcall(opts.callback, state) end
@@ -736,7 +764,9 @@ function MaidLib:AddButton(tab, opts)
         Text="", AutoButtonColor=false, LayoutOrder=tab.n,
     }, tab.page)
     corner(10, btn)
+    registerAccent(self, btn, "BackgroundColor3", "Card")
     local st = stroke(T.Border, 1, btn)
+    registerAccent(self, st, "Color", "Border")
     addSquishEffect(btn)
 
     new("TextLabel",{
@@ -758,6 +788,7 @@ function MaidLib:AddButton(tab, opts)
         Active=false, Selectable=false,
     }, btn)
     corner(8, arrow)
+    registerAccent(self, arrow, "BackgroundColor3", "Surface")
     new("TextLabel",{
         Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
         Text="›", TextSize=16, Font=FB, TextColor3=T.TextSub,
@@ -796,7 +827,9 @@ function MaidLib:AddBox(tab, opts)
         BackgroundColor3=T.Card, BorderSizePixel=0, LayoutOrder=tab.n,
     }, tab.page)
     corner(10, row)
+    registerAccent(self, row, "BackgroundColor3", "Card")
     local st = stroke(T.Border, 1, row)
+    registerAccent(self, st, "Color", "Border")
 
     new("TextLabel",{
         Size=UDim2.new(1,-20,0,16),
@@ -811,10 +844,12 @@ function MaidLib:AddBox(tab, opts)
     local inputBg = new("Frame",{
         Size=UDim2.new(1,-28,0,22),
         Position=UDim2.new(0,14,0,28),
-        BackgroundColor3=Color3.fromHex("080810"), BorderSizePixel=0,
+        BackgroundColor3=T.Bg, BorderSizePixel=0,
     }, row)
     corner(6, inputBg)
-    stroke(T.Border, 1, inputBg)
+    registerAccent(self, inputBg, "BackgroundColor3", "Bg")
+    local inputStroke = stroke(T.Border, 1, inputBg)
+    registerAccent(self, inputStroke, "Color", "Border")
 
     local box = new("TextBox",{
         Size=UDim2.new(1,-16,1,0), Position=UDim2.new(0,8,0,0),
@@ -845,7 +880,9 @@ function MaidLib:AddLabel(tab, opts)
         BackgroundColor3=T.Card, BorderSizePixel=0, LayoutOrder=tab.n,
     }, tab.page)
     corner(10, row)
-    stroke(T.Border, 1, row)
+    registerAccent(self, row, "BackgroundColor3", "Card")
+    local labelStroke = stroke(T.Border, 1, row)
+    registerAccent(self, labelStroke, "Color", "Border")
 
     new("TextLabel",{
         Size=UDim2.new(1,-28,1,0), Position=UDim2.new(0,14,0,0),
@@ -871,7 +908,9 @@ function MaidLib:AddSlider(tab, opts)
         BackgroundColor3=T.Card, BorderSizePixel=0, LayoutOrder=tab.n,
     }, tab.page)
     corner(10, row)
+    registerAccent(self, row, "BackgroundColor3", "Card")
     local st = stroke(T.Border, 1, row)
+    registerAccent(self, st, "Color", "Border")
 
     -- Label + value display
     local lbl = new("TextLabel",{
@@ -893,6 +932,7 @@ function MaidLib:AddSlider(tab, opts)
         TextColor3=T.Accent,
         TextXAlignment=Enum.TextXAlignment.Right,
     }, row)
+    registerAccent(self, valLbl, "TextColor3", "Accent")
 
     -- Track background
     local track = new("Frame",{
@@ -900,6 +940,7 @@ function MaidLib:AddSlider(tab, opts)
         Position=UDim2.new(0,14,0,38),
         BackgroundColor3=T.Border, BorderSizePixel=0,
     }, row)
+    registerAccent(self, track, "BackgroundColor3", "Border")
     corner(3, track)
 
     -- Filled portion
@@ -908,10 +949,14 @@ function MaidLib:AddSlider(tab, opts)
         BackgroundColor3=T.Accent, BorderSizePixel=0,
     }, track)
     corner(3, fill)
-    gradient(ColorSequence.new({
+    registerAccent(self, fill, "BackgroundColor3", "Accent")
+    
+    local fillGrad = gradient(ColorSequence.new({
         ColorSequenceKeypoint.new(0,T.AccentGlow),
         ColorSequenceKeypoint.new(1,T.Accent),
     }), 0, fill)
+    
+    -- Update gradient colors too on theme shifts (can just do registerAccent on the gradient if it was registered, but flat/tweened BackgroundColor3 handles it)
 
     -- Thumb
     local thumb = new("Frame",{
@@ -921,7 +966,8 @@ function MaidLib:AddSlider(tab, opts)
         ZIndex=5,
     }, track)
     corner(8, thumb)
-    stroke(T.Accent, 2, thumb)
+    local thumbStroke = stroke(T.Accent, 2, thumb)
+    registerAccent(self, thumbStroke, "Color", "Accent")
 
     local function updateVal(newVal)
         newVal = math.clamp(math.round(newVal/step)*step, min, max)
@@ -984,6 +1030,10 @@ function MaidLib:SetTheme(themeName)
     T.AccentB = theme.AccentB
     T.AccentGlow = theme.AccentGlow
     T.BorderHov = theme.BorderHov
+    T.Bg = theme.Bg
+    T.Surface = theme.Surface
+    T.Card = theme.Card
+    T.Border = theme.Border
     
     for _, item in ipairs(self.accentObjects) do
         if item.instance and item.instance.Parent then
@@ -992,9 +1042,23 @@ function MaidLib:SetTheme(themeName)
         end
     end
     
-    for _, t in ipairs(self.tabs) do
+    for i, t in ipairs(self.tabs) do
+        local active = i == self.activetab
+        tw(t.btn, {BackgroundColor3 = active and T.Card or T.Surface}, 0.3)
+        tw(t.lbl, {TextColor3 = active and T.Text or T.TextSub}, 0.3)
+        if t.ico:IsA("ImageLabel") then
+            tw(t.ico, {ImageColor3 = active and T.Accent or T.TextSub}, 0.3)
+        else
+            tw(t.ico, {TextColor3 = active and T.Accent or T.TextSub}, 0.3)
+        end
         if t.page then
             t.page.ScrollBarImageColor3 = T.Accent
+        end
+    end
+    
+    if self.toggles then
+        for _, toggleRefresh in ipairs(self.toggles) do
+            pcall(toggleRefresh)
         end
     end
 end
