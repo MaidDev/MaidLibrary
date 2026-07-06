@@ -538,10 +538,10 @@ function MaidLib:AddTab(name, icon)
     registerAccent(self, bar, "BackgroundColor3", "Accent")
 
     local IconMap = {
-        ["⛏"] = "rbxassetid://10723345869",
-        ["💎"] = "rbxassetid://10747373180",
-        ["👁"] = "rbxassetid://10734950532",
-        ["🛡"] = "rbxassetid://10734950179",
+        ["⛏"] = "rbxthumb://type=Asset&id=10723345869&w=150&h=150",
+        ["💎"] = "rbxthumb://type=Asset&id=10747373180&w=150&h=150",
+        ["👁"] = "rbxthumb://type=Asset&id=10734950532&w=150&h=150",
+        ["🛡"] = "rbxthumb://type=Asset&id=10734950179&w=150&h=150",
     }
     local iconId = IconMap[icon]
     
