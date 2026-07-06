@@ -145,14 +145,15 @@ local function addSquishEffect(button, scaleTarget)
     if not scale then
         scale = new("UIScale", {Scale = 1}, scaleTarget)
     end
-    button.MouseButton1Down:Connect(function()
-        tw(scale, {Scale = 0.95}, 0.05)
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            tw(scale, {Scale = 0.9}, 0.05)
+        end
     end)
-    button.MouseButton1Up:Connect(function()
-        tw(scale, {Scale = 1.0}, 0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-    end)
-    button.MouseLeave:Connect(function()
-        tw(scale, {Scale = 1.0}, 0.15)
+    button.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            tw(scale, {Scale = 1.0}, 0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        end
     end)
 end
 
@@ -703,7 +704,8 @@ function MaidLib:AddToggle(tab, opts)
     -- Track
     local track = new("Frame",{
         Size=UDim2.new(0,44,0,24),
-        Position=UDim2.new(1,-58,0.5,-12),
+        Position=UDim2.new(1,-36,0.5,0),
+        AnchorPoint=Vector2.new(0.5,0.5),
         BackgroundColor3=T.Border, BorderSizePixel=0,
     }, row)
     corner(12, track)
@@ -721,6 +723,7 @@ function MaidLib:AddToggle(tab, opts)
         Size=UDim2.new(0,64,0,44),
         Position=UDim2.new(1,-68,0.5,-22),
         BackgroundTransparency=1, Text="",
+        Active=true,
     }, row)
     addSquishEffect(toggleBtn, track)
 
