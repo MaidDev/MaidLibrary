@@ -938,8 +938,13 @@ function MaidLib:AddBox(tab, opts)
     end)
     box.FocusLost:Connect(function(enter)
         tw(st, {Color=T.Border}); tw(row, {BackgroundColor3=T.Card})
-        if enter and opts.callback then pcall(opts.callback, box.Text) end
+        if opts.callback then pcall(opts.callback, box.Text) end
     end)
+
+    local obj = {}
+    function obj:GetText() return box.Text end
+    function obj:SetText(t) box.Text = t end
+    return obj
 end
 
 -- ── Label / Info ─────────────────────────────────────────────
@@ -1146,6 +1151,10 @@ function MaidLib:UpdateStat(statName, value)
     elseif statName == "Sold" then
         if self.soldLabel then self.soldLabel.Text = tostring(value) end
     end
+end
+
+function MaidLib:GetTheme()
+    return T
 end
 
 return MaidLib
