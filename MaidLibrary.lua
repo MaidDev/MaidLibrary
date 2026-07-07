@@ -344,24 +344,26 @@ function MaidLib.new(title, subtitle)
     }, sidebar)
     registerAccent(self, logoDivider, "BackgroundColor3", "Border")
 
-    -- ── Tab buttons list (height adjusted for the stats box) ──
+    -- ── Tab buttons list (height adjusted dynamically) ──
     local tabScroll = new("ScrollingFrame",{
-        Size=UDim2.new(1,0,1,-195), Position=UDim2.new(0,0,0,80),
+        Size=UDim2.new(1,0,1,-160), Position=UDim2.new(0,0,0,80),
         BackgroundTransparency=1, BorderSizePixel=0,
         ScrollBarThickness=0,
         CanvasSize=UDim2.new(0,0,0,0),
         AutomaticCanvasSize=Enum.AutomaticSize.Y,
     }, sidebar)
+    self.tabScroll = tabScroll
     local tabLayout = listLayout(3, tabScroll)
     pad(6,8,8,8, tabScroll)
 
-    -- ── Session Stats Panel ──────────────────────────────────
+    -- ── Session Stats Panel (Dynamic Height) ──────────────────
     local statsCard = new("Frame", {
-        Size = UDim2.new(1, -24, 0, 95),
-        Position = UDim2.new(0, 12, 1, -110),
+        Size = UDim2.new(1, -24, 0, 60),
+        Position = UDim2.new(0, 12, 1, -75),
         BackgroundColor3 = T.Card,
         BorderSizePixel = 0,
     }, sidebar)
+    self.statsCard = statsCard
     corner(10, statsCard)
     registerAccent(self, statsCard, "BackgroundColor3", "Card")
     local statsStroke = stroke(T.Border, 1, statsCard)
@@ -404,31 +406,8 @@ function MaidLib.new(title, subtitle)
     }, statsCard)
     self.runtimeLabel = runtimeLabel
     
-    -- Crystals Mined
-    new("TextLabel", {
-        Size = UDim2.new(0.4, 0, 0, 14), Position = UDim2.new(0, 8, 0, 56),
-        BackgroundTransparency = 1, Text = "Mined:", TextSize = 11, Font = FM,
-        TextColor3 = T.TextSub, TextXAlignment = Enum.TextXAlignment.Left,
-    }, statsCard)
-    local minedLabel = new("TextLabel", {
-        Size = UDim2.new(0.6, -16, 0, 14), Position = UDim2.new(0.4, 8, 0, 56),
-        BackgroundTransparency = 1, Text = "0", TextSize = 11, Font = FB,
-        TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Right,
-    }, statsCard)
-    self.minedLabel = minedLabel
-    
-    -- Auto-Sells
-    new("TextLabel", {
-        Size = UDim2.new(0.4, 0, 0, 14), Position = UDim2.new(0, 8, 0, 72),
-        BackgroundTransparency = 1, Text = "Sold Times:", TextSize = 11, Font = FM,
-        TextColor3 = T.TextSub, TextXAlignment = Enum.TextXAlignment.Left,
-    }, statsCard)
-    local soldLabel = new("TextLabel", {
-        Size = UDim2.new(0.6, -16, 0, 14), Position = UDim2.new(0.4, 8, 0, 72),
-        BackgroundTransparency = 1, Text = "0", TextSize = 11, Font = FB,
-        TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Right,
-    }, statsCard)
-    self.soldLabel = soldLabel
+    self.stats = {}
+    self.statsCount = 0
 
     -- Start runtime counter
     local startTime = os.time()
@@ -477,7 +456,7 @@ function MaidLib.new(title, subtitle)
     new("TextLabel",{
         Size=UDim2.new(1,-100,1,-2), Position=UDim2.new(0,16,0,2),
         BackgroundTransparency=1,
-        Text="Mine a Mountain  /  MaidDev Hub",
+        Text=game.Name .. "  /  " .. (subtitle or "MaidDev Hub"),
         TextSize=12, Font=FM,
         TextColor3=T.TextSub,
         TextXAlignment=Enum.TextXAlignment.Left,
@@ -1145,11 +1124,46 @@ function MaidLib:SetStatus(statusText, color)
     end
 end
 
+function MaidLib:AddStat(name, displayName, defaultValue)
+    if not self.stats then self.stats = {} end
+    if self.stats[name] then return end
+    
+    self.statsCount = (self.statsCount or 0) + 1
+    
+    -- Shift Layout offsets (16px per added stat line)
+    local currentHeight = self.statsCard.Size.Y.Offset
+    local newHeight = currentHeight + 16
+    self.statsCard.Size = UDim2.new(1, -24, 0, newHeight)
+    self.statsCard.Position = UDim2.new(0, 12, 1, -newHeight - 15)
+    
+    local currentScrollHeight = self.tabScroll.Size.Y.Offset
+    self.tabScroll.Size = UDim2.new(1, 0, 1, currentScrollHeight - 16)
+    
+    -- Draw text elements
+    local yPos = 24 + (self.statsCount * 16)
+    
+    new("TextLabel", {
+        Size = UDim2.new(0.4, 0, 0, 14), Position = UDim2.new(0, 8, 0, yPos),
+        BackgroundTransparency = 1, Text = displayName or (name .. ":"), TextSize = 11, Font = FM,
+        TextColor3 = T.TextSub, TextXAlignment = Enum.TextXAlignment.Left,
+    }, self.statsCard)
+    
+    local valLabel = new("TextLabel", {
+        Size = UDim2.new(0.6, -16, 0, 14), Position = UDim2.new(0.4, 8, 0, yPos),
+        BackgroundTransparency = 1, Text = tostring(defaultValue or "0"), TextSize = 11, Font = FB,
+        TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Right,
+    }, self.statsCard)
+    
+    self.stats[name] = valLabel
+end
+
 function MaidLib:UpdateStat(statName, value)
-    if statName == "Crystals" or statName == "Mined" then
-        if self.minedLabel then self.minedLabel.Text = tostring(value) end
-    elseif statName == "Sold" then
-        if self.soldLabel then self.soldLabel.Text = tostring(value) end
+    if statName == "Status" or statName == "status" then
+        if self.statusLabel then self.statusLabel.Text = tostring(value) end
+    else
+        if self.stats and self.stats[statName] then
+            self.stats[statName].Text = tostring(value)
+        end
     end
 end
 
