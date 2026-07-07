@@ -491,22 +491,162 @@ function MaidLib.new(title, subtitle)
     minBtn.MouseEnter:Connect(function() tw(minBtn,{BackgroundColor3=T.Yellow,TextColor3=T.White}) end)
     minBtn.MouseLeave:Connect(function() tw(minBtn,{BackgroundColor3=T.Card,TextColor3=T.TextSub}) end)
 
+    -- Minimize states and assets
     local minimized = false
-    minBtn.Activated:Connect(function()
-        minimized = not minimized
-        if minimized then
-            tw(main, {Size=UDim2.new(0,760,0,48)}, 0.3, Enum.EasingStyle.Quart)
-            tw(topbar, {Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,0,48)}, 0.3, Enum.EasingStyle.Quart)
-            tw(sidebar, {Size=UDim2.new(0,0,1,0)}, 0.3, Enum.EasingStyle.Quart)
-            task.spawn(function()
-                task.wait(0.3)
-                if minimized then sidebar.Visible = false end
-            end)
-        else
+    local minStyle = "Circle" -- Options: "Circle", "Square", "Bar"
+    
+    local kannaImage = "rbxthumb://type=Asset&id=18335964031&w=420&h=420"
+    pcall(function()
+        if writefile and getcustomasset then
+            local localName = "kanna1.pn    -- Hidden minimized containers
+    -- Circle: borderless, transparent, floating image style (70x70)
+    local circleMin = new("ImageButton", {
+        Size = UDim2.new(0, 70, 0, 70),
+        Position = main.Position,
+        BackgroundTransparency = 1,
+        ImageTransparency = 0.15,
+        Image = kannaImage,
+        Visible = false,
+        ZIndex = 100,
+    }, sg)
+    corner(35, circleMin)
+    
+    -- Square: solid card background (T.Card), with border stroke (T.Border), Kanna image inside (70x70)
+    local squareMin = new("ImageButton", {
+        Size = UDim2.new(0, 70, 0, 70),
+        Position = main.Position,
+        BackgroundColor3 = T.Card,
+        BackgroundTransparency = 0,
+        ImageTransparency = 0,
+        Image = kannaImage,
+        Visible = false,
+        ZIndex = 100,
+    }, sg)
+    corner(12, squareMin)
+    local squareStroke = stroke(T.Border, 1, squareMin)
+    registerAccent(self, squareStroke, "Color", "Border")
+    registerAccent(self, squareMin, "BackgroundColor3", "Card")
+
+    -- Memory of last restored window position (starts at center)
+    local lastPosition = main.Position
+    
+    -- Memory of last dragged minimize button position (nil initially, spawns at minBtn first time)
+    local lastMinimizedPosition = nil
+
+    -- Unminimize triggers
+    local function restoreWindow(minimizedPos)
+        minimized = false
+        circleMin.Visible = false
+        squareMin.Visible = false
+        
+        main.Visible = true
+        
+        -- Clamping memory to keep main window fully on screen
+        local screenW = sg.AbsoluteSize.X
+        local screenH = sg.AbsoluteSize.Y
+        
+        local xOffset = lastPosition.X.Offset
+        local yOffset = lastPosition.Y.Offset
+        
+        -- Width = 760, Height = 500. Center pivot = 0.5 Scale
+        local minX = -screenW/2
+        local maxX = math.max(minX, screenW/2 - 760)
+        xOffset = math.clamp(xOffset, minX, maxX)
+        
+        local minY = -screenH/2 + 20
+        local maxY = math.max(minY, screenH/2 - 500)
+        yOffset = math.clamp(yOffset, minY, maxY)
+        
+        lastPosition = UDim2.new(lastPosition.X.Scale, xOffset, lastPosition.Y.Scale, yOffset)
+        main.Position = lastPosition
+        
+        if minStyle == "Bar" then
             sidebar.Visible = true
             tw(main, {Size=UDim2.new(0,760,0,500)}, 0.3, Enum.EasingStyle.Quart)
             tw(topbar, {Position=UDim2.new(0,210,0,0), Size=UDim2.new(1,-210,0,48)}, 0.3, Enum.EasingStyle.Quart)
             tw(sidebar, {Size=UDim2.new(0,210,1,0)}, 0.3, Enum.EasingStyle.Quart)
+        else
+            tw(main, {GroupTransparency = 0}, 0.25)
+        end
+    end
+
+    -- Drag & click handler separation
+    local function makeMinimizeButtonDragAndClick(button)
+        local dragStartPos = nil
+        local startFramePos = nil
+        local isDragging = false
+        
+        button.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                dragStartPos = i.Position
+                startFramePos = button.Position
+                isDragging = true
+            end
+        end)
+        
+        local inputChangedConn
+        inputChangedConn = UIS.InputChanged:Connect(function(i)
+            if isDragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                if dragStartPos and startFramePos then
+                    local delta = i.Position - dragStartPos
+                    button.Position = UDim2.new(startFramePos.X.Scale, startFramePos.X.Offset + delta.X, startFramePos.Y.Scale, startFramePos.Y.Offset + delta.Y)
+                end
+            end
+        end)
+        
+        button.InputEnded:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                if isDragging then
+                    isDragging = false
+                    local finalDelta = dragStartPos and (i.Position - dragStartPos).Magnitude or 0
+                    if finalDelta < 5 then
+                        restoreWindow(button.Position)
+                    else
+                        -- Memorize last dragged place of minimized button!
+                        lastMinimizedPosition = button.Position
+                    end
+                end
+            end
+        end)
+    end
+
+    makeMinimizeButtonDragAndClick(circleMin)
+    makeMinimizeButtonDragAndClick(squareMin)
+
+    -- Minimize button action (saves location, spawns at click-point first time, remembers dragging place)
+    minBtn.Activated:Connect(function()
+        if minStyle == "Bar" then
+            if minimized then
+                restoreWindow(main.Position)
+            else
+                minimized = true
+                lastPosition = main.Position
+                sidebar.Visible = false
+                tw(main, {Size=UDim2.new(0,760,0,48)}, 0.3, Enum.EasingStyle.Quart)
+                tw(topbar, {Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,0,48)}, 0.3, Enum.EasingStyle.Quart)
+                tw(sidebar, {Size=UDim2.new(0,0,1,0)}, 0.3, Enum.EasingStyle.Quart)
+            end
+        else
+            minimized = true
+            lastPosition = main.Position
+            
+            tw(main, {GroupTransparency = 1}, 0.25)
+            task.wait(0.25)
+            main.Visible = false
+            
+            -- Spawns on the minimize button (or mouse point) only the very first time!
+            if not lastMinimizedPosition then
+                local minBtnPos = minBtn.AbsolutePosition
+                lastMinimizedPosition = UDim2.new(0, minBtnPos.X - 21, 0, minBtnPos.Y - 21)
+            end
+            
+            if minStyle == "Circle" then
+                circleMin.Position = lastMinimizedPosition
+                circleMin.Visible = true
+            elseif minStyle == "Square" then
+                squareMin.Position = lastMinimizedPosition
+                squareMin.Visible = true
+            end
         end
     end)
 
@@ -529,6 +669,12 @@ function MaidLib.new(title, subtitle)
         task.wait(0.26)
         sg:Destroy()
     end)
+
+    function self:SetMinimizeStyle(styleName)
+        if styleName == "Circle" or styleName == "Square" or styleName == "Bar" then
+            minStyle = styleName
+        end
+    end
 
     makeDraggable(topbar, main)
 
@@ -802,7 +948,7 @@ function MaidLib:AddToggle(tab, opts)
     end
     setVisual(state, false)
 
-    toggleBtn.Activated:Connect(function()
+    toggleBtn.MouseButton1Click:Connect(function()
         state = not state
         setVisual(state, true)
         if opts.callback then pcall(opts.callback, state) end
@@ -874,8 +1020,8 @@ function MaidLib:AddButton(tab, opts)
         tw(arrow, {BackgroundColor3=T.Surface})
         tw(arrow:FindFirstChildOfClass("TextLabel"), {TextColor3=T.TextSub})
     end)
-    btn.Activated:Connect(function()
-        print("[MaidLib] Button clicked: " .. tostring(opts.text))
+    btn.MouseButton1Click:Connect(function()
+        print("[MaidLib] Button clicked: " .. tostring(lbl.Text))
         if opts.callback then
             local ok, err = pcall(opts.callback, btn)
             if not ok then
@@ -950,6 +1096,8 @@ end
 -- ── Label / Info ─────────────────────────────────────────────
 function MaidLib:AddLabel(tab, opts)
     tab.n += 1
+    local text = type(opts) == "table" and opts.text or tostring(opts)
+    
     local row = new("Frame",{
         Size=UDim2.new(1,0,0,36),
         BackgroundColor3=T.Card, BorderSizePixel=0, LayoutOrder=tab.n,
@@ -959,15 +1107,24 @@ function MaidLib:AddLabel(tab, opts)
     local labelStroke = stroke(T.Border, 1, row)
     registerAccent(self, labelStroke, "Color", "Border")
 
-    new("TextLabel",{
+    local textLabel = new("TextLabel",{
         Size=UDim2.new(1,-28,1,0), Position=UDim2.new(0,14,0,0),
         BackgroundTransparency=1,
-        Text=opts.text or "",
+        Text=text,
         TextSize=12, Font=FM,
         TextColor3=T.TextSub,
         TextXAlignment=Enum.TextXAlignment.Left,
         TextWrapped=true,
     }, row)
+    
+    local labelObj = {}
+    function labelObj:SetText(txt)
+        textLabel.Text = tostring(txt)
+    end
+    function labelObj:Destroy()
+        row:Destroy()
+    end
+    return labelObj
 end
 
 -- ── Slider ───────────────────────────────────────────────────
@@ -1161,7 +1318,7 @@ function MaidLib:AddStat(name, displayName, defaultValue)
     self.tabScroll.Size = UDim2.new(1, 0, 1, currentScrollHeight - 16)
     
     -- Draw text elements
-    local yPos = 24 + (self.statsCount * 16)
+    local yPos = 40 + (self.statsCount * 16)
     
     new("TextLabel", {
         Size = UDim2.new(0.4, 0, 0, 14), Position = UDim2.new(0, 8, 0, yPos),
@@ -1190,6 +1347,52 @@ end
 
 function MaidLib:GetTheme()
     return T
+end
+
+function MaidLib:SetThemeColor(colorType, newColor)
+    T[colorType] = newColor
+    for _, obj in ipairs(self.accentObjects) do
+        if obj.colorType == colorType then
+            pcall(function()
+                tw(obj.instance, {[obj.prop] = newColor}, 0.25)
+            end)
+        end
+    end
+end
+
+function MaidLib:ChangeThemePreset(presetName)
+    local presets = {
+        Purple = {
+            Accent = Color3.fromHex("8B5CF6"),
+            AccentGlow = Color3.fromHex("A78BFA"),
+        },
+        Green = {
+            Accent = Color3.fromHex("10B981"),
+            AccentGlow = Color3.fromHex("34D399"),
+        },
+        Pink = {
+            Accent = Color3.fromHex("EC4899"),
+            AccentGlow = Color3.fromHex("F472B6"),
+        },
+        Amber = {
+            Accent = Color3.fromHex("F59E0B"),
+            AccentGlow = Color3.fromHex("FBBF24"),
+        },
+        Red = {
+            Accent = Color3.fromHex("EF4444"),
+            AccentGlow = Color3.fromHex("F87171"),
+        },
+        Blue = {
+            Accent = Color3.fromHex("3B82F6"),
+            AccentGlow = Color3.fromHex("60A5FA"),
+        }
+    }
+    
+    local preset = presets[presetName]
+    if preset then
+        self:SetThemeColor("Accent", preset.Accent)
+        self:SetThemeColor("AccentGlow", preset.AccentGlow)
+    end
 end
 
 function MaidLib:Notify(message, notifType)
