@@ -165,6 +165,17 @@ function MaidLib.new(title, subtitle)
     self.visible    = true
     self.accentObjects = {}
 
+    local gameName = game.Name
+    if game.PlaceId > 0 then
+        local success, info = pcall(function()
+            return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+        end)
+        if success and info and info.Name then
+            gameName = info.Name
+        end
+    end
+    self.gameName = gameName
+
     -- Root GUI
     local sg = new("ScreenGui", {
         Name = "MaidDevUI", ResetOnSpawn = false,
@@ -456,7 +467,7 @@ function MaidLib.new(title, subtitle)
     new("TextLabel",{
         Size=UDim2.new(1,-100,1,-2), Position=UDim2.new(0,16,0,2),
         BackgroundTransparency=1,
-        Text=game.Name .. "  /  " .. (subtitle or "MaidDev Hub"),
+        Text=self.gameName .. "  /  " .. (subtitle or "MaidDev Hub"),
         TextSize=12, Font=FM,
         TextColor3=T.TextSub,
         TextXAlignment=Enum.TextXAlignment.Left,
@@ -859,7 +870,7 @@ function MaidLib:AddButton(tab, opts)
     btn.Activated:Connect(function()
         print("[MaidLib] Button clicked: " .. tostring(opts.text))
         if opts.callback then
-            local ok, err = pcall(opts.callback)
+            local ok, err = pcall(opts.callback, btn)
             if not ok then
                 warn("[MaidLib] Button callback error: " .. tostring(err))
             end
@@ -1169,6 +1180,91 @@ end
 
 function MaidLib:GetTheme()
     return T
+end
+
+function MaidLib:Notify(message, notifType)
+    if not self.activeNotifications then self.activeNotifications = {} end
+    notifType = notifType or "Info"
+    
+    local T = self:GetTheme()
+    local color = T.Accent
+    if notifType == "Success" then
+        color = T.Green
+    elseif notifType == "Error" then
+        color = T.Red
+    end
+    
+    -- Create Notif Frame
+    local notif = new("Frame", {
+        Size = UDim2.new(0, 280, 0, 52),
+        Position = UDim2.new(1, 10, 1, -70),
+        BackgroundColor3 = T.Card,
+        BorderSizePixel = 0,
+        ZIndex = 9999,
+    }, self.sg or CoreGui:FindFirstChild("MaidDevUI"))
+    corner(8, notif)
+    local st = stroke(T.Border, 1, notif)
+    
+    -- Vertical indicator strip
+    local indicator = new("Frame", {
+        Size = UDim2.new(0, 4, 1, 0),
+        BackgroundColor3 = color,
+        BorderSizePixel = 0,
+    }, notif)
+    corner(4, indicator)
+    
+    -- Title
+    new("TextLabel", {
+        Size = UDim2.new(1, -24, 0, 16),
+        Position = UDim2.new(0, 12, 0, 8),
+        BackgroundTransparency = 1,
+        Text = notifType:upper(),
+        TextSize = 10, Font = FB,
+        TextColor3 = color,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, notif)
+    
+    -- Message
+    new("TextLabel", {
+        Size = UDim2.new(1, -24, 0, 20),
+        Position = UDim2.new(0, 12, 0, 24),
+        BackgroundTransparency = 1,
+        Text = message or "Action complete.",
+        TextSize = 11, Font = FR,
+        TextColor3 = T.Text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClipsDescendants = true,
+    }, notif)
+    
+    -- Shift other active notifications up
+    local targetY = -70
+    for i, active in ipairs(self.activeNotifications) do
+        local newY = active.frame.Position.Y.Offset - 62
+        tw(active.frame, {Position = UDim2.new(1, -290, 1, newY)}, 0.25)
+    end
+    
+    -- Register this notif
+    local data = {frame = notif}
+    table.insert(self.activeNotifications, data)
+    
+    -- Slide In
+    tw(notif, {Position = UDim2.new(1, -290, 1, targetY)}, 0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+    
+    -- Auto Dismiss
+    task.delay(3.5, function()
+        -- Slide Out
+        tw(notif, {Position = UDim2.new(1, 10, notif.Position.Y.Scale, notif.Position.Y.Offset)}, 0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+        task.wait(0.4)
+        
+        -- Remove from table & Destroy
+        for idx, val in ipairs(self.activeNotifications) do
+            if val == data then
+                table.remove(self.activeNotifications, idx)
+                break
+            end
+        end
+        notif:Destroy()
+    end)
 end
 
 return MaidLib
