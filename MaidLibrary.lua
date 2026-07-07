@@ -121,6 +121,12 @@ local function listLayout(pad_, p)
     return new("UIListLayout", {Padding=UDim.new(0,pad_ or 0), SortOrder=Enum.SortOrder.LayoutOrder}, p)
 end
 
+local function makePassThrough(instance)
+    instance.Active = false
+    instance.Selectable = false
+    pcall(function() instance.Interactable = false end)
+end
+
 local function makeDraggable(handle, frame)
     local drag, ds, sp = false, nil, nil
     handle.InputBegan:Connect(function(i)
@@ -829,7 +835,7 @@ function MaidLib:AddButton(tab, opts)
     registerAccent(self, st, "Color", "Border")
     addSquishEffect(btn)
 
-    new("TextLabel",{
+    local lbl = new("TextLabel",{
         Size=UDim2.new(1,-48,1,0),
         Position=UDim2.new(0,14,0,0),
         BackgroundTransparency=1,
@@ -837,23 +843,24 @@ function MaidLib:AddButton(tab, opts)
         TextSize=13, Font=FM,
         TextColor3=T.Text,
         TextXAlignment=Enum.TextXAlignment.Left,
-        Active=false, Selectable=false,
     }, btn)
+    makePassThrough(lbl)
 
     -- Arrow badge
     local arrow = new("Frame",{
         Size=UDim2.new(0,28,0,28),
         Position=UDim2.new(1,-40,0.5,-14),
         BackgroundColor3=T.Surface, BorderSizePixel=0,
-        Active=false, Selectable=false,
     }, btn)
+    makePassThrough(arrow)
     corner(8, arrow)
     registerAccent(self, arrow, "BackgroundColor3", "Surface")
-    new("TextLabel",{
+    
+    local arrowIcon = new("TextLabel",{
         Size=UDim2.new(1,0,1,0), BackgroundTransparency=1,
         Text="›", TextSize=16, Font=FB, TextColor3=T.TextSub,
-        Active=false, Selectable=false,
     }, arrow)
+    makePassThrough(arrowIcon)
 
     btn.MouseEnter:Connect(function()
         tw(btn,   {BackgroundColor3=T.SurfaceHov})
@@ -928,6 +935,9 @@ function MaidLib:AddBox(tab, opts)
     end)
     box.FocusLost:Connect(function(enter)
         tw(st, {Color=T.Border}); tw(row, {BackgroundColor3=T.Card})
+        if opts.callback then pcall(opts.callback, box.Text) end
+    end)
+    box:GetPropertyChangedSignal("Text"):Connect(function()
         if opts.callback then pcall(opts.callback, box.Text) end
     end)
 
