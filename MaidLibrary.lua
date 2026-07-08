@@ -1072,7 +1072,7 @@ function MaidLib:AddButton(tab, opts)
         tw(arrow:FindFirstChildOfClass("TextLabel"), {TextColor3=T.TextSub})
     end)
     btn.MouseButton1Click:Connect(function()
-        print("[MaidLib] Button clicked: " .. tostring(lbl.Text))
+        -- print("[MaidLib] Button clicked: " .. tostring(lbl.Text))
         if opts.callback then
             local ok, err = pcall(opts.callback, btn)
             if not ok then
