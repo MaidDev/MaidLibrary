@@ -419,7 +419,7 @@ function MaidLib.new(title, subtitle)
     local runtimeLabel = new("TextLabel", {
         Size = UDim2.new(0.6, -16, 0, 14), Position = UDim2.new(0.4, 8, 0, 40),
         BackgroundTransparency = 1, Text = "00:00:00", TextSize = 11, Font = FR,
-        TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Right,
+        TextColor3 = Color3.fromRGB(56, 189, 248), TextXAlignment = Enum.TextXAlignment.Right,
     }, statsCard)
     self.runtimeLabel = runtimeLabel
     
@@ -1349,7 +1349,20 @@ end
 function MaidLib:SetStatus(statusText, color)
     if self.statusLabel then
         self.statusLabel.Text = statusText
-        if color then self.statusLabel.TextColor3 = color end
+        if color then
+            self.statusLabel.TextColor3 = color
+        else
+            -- Auto-colorize based on status text
+            if statusText == "Idle" then
+                self.statusLabel.TextColor3 = Color3.fromRGB(161, 161, 170)
+            elseif statusText == "Auto Farming" or statusText:find("Farm") then
+                self.statusLabel.TextColor3 = Color3.fromRGB(52, 211, 153)
+            elseif statusText == "Kill Aura" or statusText:find("Aura") or statusText:find("Kill") then
+                self.statusLabel.TextColor3 = Color3.fromRGB(248, 113, 113)
+            else
+                self.statusLabel.TextColor3 = Color3.fromRGB(167, 139, 250)
+            end
+        end
     end
 end
 
@@ -1377,21 +1390,113 @@ function MaidLib:AddStat(name, displayName, defaultValue)
         TextColor3 = T.TextSub, TextXAlignment = Enum.TextXAlignment.Left,
     }, self.statsCard)
     
-    local valLabel = new("TextLabel", {
+    -- Container frame to clip scrolling text (reduced width to make key scroll properly and look clean)
+    local container = new("Frame", {
         Size = UDim2.new(0.6, -16, 0, 14), Position = UDim2.new(0.4, 8, 0, yPos),
-        BackgroundTransparency = 1, Text = tostring(defaultValue or "0"), TextSize = 11, Font = FB,
-        TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Right,
+        BackgroundTransparency = 1, ClipsDescendants = true, BorderSizePixel = 0,
     }, self.statsCard)
     
-    self.stats[name] = valLabel
+    local valLabel = new("TextLabel", {
+        Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1, Text = tostring(defaultValue or "0"), TextSize = 11, Font = FB,
+        TextColor3 = T.Text, TextXAlignment = Enum.TextXAlignment.Right,
+    }, container)
+    
+    self.stats[name] = {
+        Label = valLabel,
+        Container = container,
+        Name = name,
+        Token = 0
+    }
+    
+    self:ApplyMarquee(name, tostring(defaultValue or "0"))
+end
+
+function MaidLib:ApplyMarquee(statName, text)
+    local statData = self.stats[statName]
+    if not statData then return end
+    
+    statData.Token = (statData.Token or 0) + 1
+    local currentToken = statData.Token
+    
+    local label = statData.Label
+    local container = statData.Container
+    
+    local TextService = game:GetService("TextService")
+    local fontSize = 11
+    local font = label.Font
+    local containerWidth = container.AbsoluteSize.X
+    
+    if containerWidth == 0 then
+        containerWidth = 180
+    end
+    
+    local textSize = TextService:GetTextSize(text, fontSize, font, Vector2.new(10000, 14))
+    local textWidth = textSize.X
+    
+    -- Expiration timer text coloring logic for TimeLeft stat
+    if statName == "TimeLeft" then
+        local exp = getgenv().MaidDevExpiration
+        if exp and exp ~= -1 then
+            local timeLeft = exp - os.time()
+            if timeLeft > 7200 then
+                label.TextColor3 = Color3.fromRGB(52, 211, 153) -- Green
+            elseif timeLeft > 3600 then
+                label.TextColor3 = Color3.fromRGB(52, 211, 153) -- Green
+            elseif timeLeft > 600 then
+                label.TextColor3 = Color3.fromRGB(245, 158, 11) -- Orange
+            else
+                label.TextColor3 = Color3.fromRGB(239, 68, 68) -- Red
+            end
+        else
+            label.TextColor3 = Color3.fromRGB(52, 211, 153) -- Unlimited Green
+        end
+    end
+    
+    if textWidth > containerWidth then
+        label.Size = UDim2.new(0, textWidth + 10, 1, 0)
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        
+        task.spawn(function()
+            task.wait(2.0)
+            local speed = 25
+            local distance = textWidth - containerWidth + 8
+            local duration = distance / speed
+            
+            while statData.Token == currentToken and container.Parent do
+                local tweenLeft = game:GetService("TweenService"):Create(label, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+                    Position = UDim2.new(0, -distance, 0, 0)
+                })
+                tweenLeft:Play()
+                
+                local elapsed = 0
+                while elapsed < duration and statData.Token == currentToken do
+                    task.wait(0.1)
+                    elapsed = elapsed + 0.1
+                end
+                
+                if statData.Token ~= currentToken then break end
+                task.wait(2.0)
+                
+                label.Position = UDim2.new(0, 0, 0, 0)
+                task.wait(2.0)
+            end
+        end)
+    else
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.Position = UDim2.new(0, 0, 0, 0)
+        label.TextXAlignment = Enum.TextXAlignment.Right
+    end
 end
 
 function MaidLib:UpdateStat(statName, value)
     if statName == "Status" or statName == "status" then
-        if self.statusLabel then self.statusLabel.Text = tostring(value) end
+        self:SetStatus(tostring(value))
     else
         if self.stats and self.stats[statName] then
-            self.stats[statName].Text = tostring(value)
+            local statData = self.stats[statName]
+            statData.Label.Text = tostring(value)
+            self:ApplyMarquee(statName, tostring(value))
         end
     end
 end
