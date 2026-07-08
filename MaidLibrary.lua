@@ -498,7 +498,26 @@ function MaidLib.new(title, subtitle)
     local kannaImage = "rbxthumb://type=Asset&id=18335964031&w=420&h=420"
     pcall(function()
         if writefile and getcustomasset then
-            local localName = "kanna1.pn    -- Hidden minimized containers
+            local localName = "kanna1.png"
+            local isDownloaded = false
+            if isfile and isfile(localName) then
+                isDownloaded = true
+            elseif readfile then
+                local exists = pcall(function() return readfile(localName) end)
+                if exists then isDownloaded = true end
+            end
+            
+            if not isDownloaded then
+                local url = "https://raw.githubusercontent.com/MaidDev/MaidLibrary/main/kanna1.png"
+                local content = game:HttpGet(url)
+                if content and #content > 0 then
+                    writefile(localName, content)
+                end
+            end
+            
+            kannaImage = getcustomasset(localName)
+        end
+    end)
     -- Circle: borderless, transparent, floating image style (70x70)
     local circleMin = new("ImageButton", {
         Size = UDim2.new(0, 70, 0, 70),
@@ -511,21 +530,44 @@ function MaidLib.new(title, subtitle)
     }, sg)
     corner(35, circleMin)
     
-    -- Square: solid card background (T.Card), with border stroke (T.Border), Kanna image inside (70x70)
+    -- Square: premium collectible card background (T.Card), with border stroke (T.Border), Kanna image inside (70x70)
     local squareMin = new("ImageButton", {
         Size = UDim2.new(0, 70, 0, 70),
         Position = main.Position,
         BackgroundColor3 = T.Card,
         BackgroundTransparency = 0,
-        ImageTransparency = 0,
-        Image = kannaImage,
+        ImageTransparency = 1, -- Hide main button image so children draw
         Visible = false,
         ZIndex = 100,
     }, sg)
     corner(12, squareMin)
-    local squareStroke = stroke(T.Border, 1, squareMin)
+    local squareStroke = stroke(T.Border, 1.5, squareMin)
     registerAccent(self, squareStroke, "Color", "Border")
     registerAccent(self, squareMin, "BackgroundColor3", "Card")
+    
+    -- Kanna avatar inside card (size 46x46, centered on top half)
+    local squareImg = new("ImageLabel", {
+        Size = UDim2.new(0, 46, 0, 46),
+        Position = UDim2.new(0.5, 0, 0.4, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Image = kannaImage,
+        ZIndex = 101,
+    }, squareMin)
+    
+    -- "MAID" caption text at bottom
+    local squareTxt = new("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 14),
+        Position = UDim2.new(0.5, 0, 0.82, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Text = "MAID",
+        TextSize = 9,
+        Font = FB,
+        TextColor3 = T.Accent,
+        ZIndex = 101,
+    }, squareMin)
+    registerAccent(self, squareTxt, "TextColor3", "Accent")
 
     -- Memory of last restored window position (starts at center)
     local lastPosition = main.Position
@@ -541,24 +583,26 @@ function MaidLib.new(title, subtitle)
         
         main.Visible = true
         
-        -- Clamping memory to keep main window fully on screen
-        local screenW = sg.AbsoluteSize.X
-        local screenH = sg.AbsoluteSize.Y
-        
-        local xOffset = lastPosition.X.Offset
-        local yOffset = lastPosition.Y.Offset
-        
-        -- Width = 760, Height = 500. Center pivot = 0.5 Scale
-        local minX = -screenW/2
-        local maxX = math.max(minX, screenW/2 - 760)
-        xOffset = math.clamp(xOffset, minX, maxX)
-        
-        local minY = -screenH/2 + 20
-        local maxY = math.max(minY, screenH/2 - 500)
-        yOffset = math.clamp(yOffset, minY, maxY)
-        
-        lastPosition = UDim2.new(lastPosition.X.Scale, xOffset, lastPosition.Y.Scale, yOffset)
-        main.Position = lastPosition
+        if minStyle ~= "Bar" then
+            -- Clamping memory to keep main window fully on screen
+            local screenW = sg.AbsoluteSize.X
+            local screenH = sg.AbsoluteSize.Y
+            
+            local xOffset = lastPosition.X.Offset
+            local yOffset = lastPosition.Y.Offset
+            
+            -- Width = 760, Height = 500. Center pivot = 0.5 Scale
+            local minX = -screenW/2
+            local maxX = math.max(minX, screenW/2 - 760)
+            xOffset = math.clamp(xOffset, minX, maxX)
+            
+            local minY = -screenH/2 + 20
+            local maxY = math.max(minY, screenH/2 - 500)
+            yOffset = math.clamp(yOffset, minY, maxY)
+            
+            lastPosition = UDim2.new(lastPosition.X.Scale, xOffset, lastPosition.Y.Scale, yOffset)
+            main.Position = lastPosition
+        end
         
         if minStyle == "Bar" then
             sidebar.Visible = true
@@ -566,6 +610,11 @@ function MaidLib.new(title, subtitle)
             tw(topbar, {Position=UDim2.new(0,210,0,0), Size=UDim2.new(1,-210,0,48)}, 0.3, Enum.EasingStyle.Quart)
             tw(sidebar, {Size=UDim2.new(0,210,1,0)}, 0.3, Enum.EasingStyle.Quart)
         else
+            pcall(function()
+                mainStroke.Transparency = 1
+                mainStroke.Enabled = true
+            end)
+            tw(mainStroke, {Transparency = 0}, 0.25)
             tw(main, {GroupTransparency = 0}, 0.25)
         end
     end
@@ -620,7 +669,6 @@ function MaidLib.new(title, subtitle)
                 restoreWindow(main.Position)
             else
                 minimized = true
-                lastPosition = main.Position
                 sidebar.Visible = false
                 tw(main, {Size=UDim2.new(0,760,0,48)}, 0.3, Enum.EasingStyle.Quart)
                 tw(topbar, {Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,0,48)}, 0.3, Enum.EasingStyle.Quart)
@@ -630,9 +678,12 @@ function MaidLib.new(title, subtitle)
             minimized = true
             lastPosition = main.Position
             
+            pcall(function() mainStroke.Enabled = true end)
+            tw(mainStroke, {Transparency = 1}, 0.25)
             tw(main, {GroupTransparency = 1}, 0.25)
             task.wait(0.25)
             main.Visible = false
+            pcall(function() mainStroke.Enabled = false end) -- Clear ghost outline!
             
             -- Spawns on the minimize button (or mouse point) only the very first time!
             if not lastMinimizedPosition then
@@ -654,7 +705,7 @@ function MaidLib.new(title, subtitle)
     local closeBtn = new("TextButton",{
         Size=UDim2.new(0,28,0,28), Position=UDim2.new(1,-36,0.5,-14),
         BackgroundColor3=T.Card, BorderSizePixel=0,
-        Text="✕", TextSize=12, Font=FB,
+        Text="X", TextSize=11, Font=FB,
         TextColor3=T.TextSub, AutoButtonColor=false,
     }, topbar)
     corner(8, closeBtn)
